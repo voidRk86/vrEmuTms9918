@@ -400,14 +400,14 @@ static inline uint32_t tmsTestCollisionMask(VR_EMU_INST_ARG const uint32_t xPos,
 {
   uint32_t rowSpriteBitsWord = xPos >> 5;
   uint32_t rowSpriteBitsWordBit = xPos & 0x1f;
-  
+
   uint32_t validPixels = (~rowSpriteBits[rowSpriteBitsWord]) & (spritePixels >> rowSpriteBitsWordBit);
   rowSpriteBits[rowSpriteBitsWord] |= validPixels;
   validPixels <<= rowSpriteBitsWordBit;
 
-  if ((rowSpriteBitsWordBit + spriteWidth) > 32)
+  rowSpriteBitsWordBit = 32 - rowSpriteBitsWordBit;
+  if (rowSpriteBitsWordBit < spriteWidth)
   {
-    rowSpriteBitsWordBit = 32 - rowSpriteBitsWordBit;
     uint32_t right = (~rowSpriteBits[++rowSpriteBitsWord]) & (spritePixels << rowSpriteBitsWordBit);
     rowSpriteBits[rowSpriteBitsWord] |= right;
     validPixels |= (right >> rowSpriteBitsWordBit);
@@ -428,9 +428,9 @@ static inline void tmsSetTransparentSpriteMask(VR_EMU_INST_ARG const uint32_t xP
   
   rowTransparentSpriteBits[rowSpriteBitsWord] |= spritePixels >> rowSpriteBitsWordBit;
 
-  if ((rowSpriteBitsWordBit + spriteWidth) > 32)
+  rowSpriteBitsWordBit = 32 - rowSpriteBitsWordBit;
+  if (rowSpriteBitsWordBit < spriteWidth)
   {
-    rowSpriteBitsWordBit = 32 - rowSpriteBitsWordBit;
     rowTransparentSpriteBits[rowSpriteBitsWord + 1] |= spritePixels << rowSpriteBitsWordBit;
   }
 }
@@ -451,10 +451,10 @@ static inline uint32_t tmsTestRowBitsMask(VR_EMU_INST_ARG const uint32_t xPos, c
   if (update) rowBits[rowBitsWord] |= validPixels;
   if (test || testColl) validPixels <<= rowBitsWordBit;
   
-  if ((rowBitsWordBit + tileWidth) > 32)
+  rowBitsWordBit = 32 - rowBitsWordBit;
+  if (rowBitsWordBit < tileWidth)
   {
     ++rowBitsWord;
-    rowBitsWordBit = 32 - rowBitsWordBit;
     uint32_t right = (tilePixels << rowBitsWordBit);
 
     if (testColl) right &= ~rowSpriteBits[rowBitsWord];
@@ -506,7 +506,7 @@ static void ecmLookupInit()
  * use a lookup table. generate the doubledBits lookup table when we need it
  * using doubledBitsNibble.
  */
-static uint8_t  __aligned(8) doubledBitsNibble[16] = {
+static uint8_t  __aligned(4) doubledBitsNibble[16] = {
   0x00, 0x03, 0x0c, 0x0f,
   0x30, 0x33, 0x3c, 0x3f,
   0xc0, 0xc3, 0xcc, 0xcf,
@@ -514,7 +514,7 @@ static uint8_t  __aligned(8) doubledBitsNibble[16] = {
 };
 
 /* lookup for doubling pixel patterns in mag mode */
-static __attribute__((section(".scratch_x.lookup"))) uint16_t __aligned(8) doubledBits[256];
+static __attribute__((section(".scratch_x.lookup"))) uint16_t __aligned(4) doubledBits[256];
 static void doubledBitsInit()
 {
   for (int i = 0; i < 256; ++i)
@@ -524,7 +524,7 @@ static void doubledBitsInit()
 }
 
 /* reversed bits in a byte */
-static __attribute__((section(".scratch_x.lookup"))) uint8_t __aligned(8) reversedBits[256];
+static __attribute__((section(".scratch_x.lookup"))) uint8_t __aligned(4) reversedBits[256];
 
 static uint8_t reverseBits(uint8_t byte) {
     byte = (byte & 0xf0) >> 4 | (byte & 0x0f) << 4;
@@ -563,18 +563,6 @@ static void maskExpandNibbleToWordRevInit()
   }
 }
 
-/* bitmap bytes to mask values */
-static __attribute__((section(".scratch_x.lookup"))) __aligned(4) uint8_t bitmapByteMask[256];
-static __attribute__((section(".scratch_x.lookup"))) __aligned(4) uint8_t bitmapByteMaskFat[256];
-static void bitmapMasksInit()
-{
-  for (int i = 0; i < 256; ++i)
-  {
-    bitmapByteMask[i] = ((bool)(i & 0xc0) << 7) | ((bool)(i & 0x30) << 6) | ((bool)(i & 0xc) << 5) | ((bool)(i & 0xc0) << 4);
-    bitmapByteMaskFat[i] = ((i & 0xf0) ? 0xc0 : 0x00) | ((i & 0x0f) ? 0xc : 0x0);
-  }
-}
-
 bool lookupsReady = false;
 void initLookups()
 {
@@ -585,7 +573,6 @@ void initLookups()
   reversedBitsInit();
   repeatedPaletteInit();
   maskExpandNibbleToWordRevInit();
-  bitmapMasksInit();
   lookupsReady = true;
 }
 
