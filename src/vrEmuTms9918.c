@@ -1093,7 +1093,7 @@ static void __time_critical_func(vrEmuTms9918Text80ScanLine)(VR_EMU_INST_ARG uin
 
   if (TMS_REGISTER(tms9918, 0x32) & 0x02)  // position-based attributes
   {
-    uint32_t colorTableAddr = (tmsColorTableAddr(tms9918)) + tileY * TEXT80_NUM_COLS;
+    uint16_t colorTableAddr = (tmsColorTableAddr(tms9918)) + tileY * TEXT80_NUM_COLS;
     if (swapYPage) colorTableAddr ^= 0x800;
 
     const bool tilesDisabled = TMS_REGISTER(tms9918, 0x32) & 0x10;
@@ -1212,8 +1212,7 @@ static inline uint32_t* rederEcmShiftedTile(
   const uint32_t tilePixels[2],
   const uint32_t pattMask,
   const uint32_t shift,
-  const uint32_t reverseShift,
-  const bool isTile2) 
+  const uint32_t reverseShift) 
 {
   const uint32_t leftMask = maskExpandNibbleToWordRev[pattMask >> 4];
   const uint32_t rightMask = maskExpandNibbleToWordRev[pattMask & 0xf];
@@ -1285,7 +1284,7 @@ static inline uint32_t quadPixelIncrement(uint32_t startPattBit)
 static inline uint32_t* renderEcm0Tile(
   uint32_t *quadPixels,
   const uint32_t xPos,
-  const uint32_t pattIdx,
+  const uint8_t pattIdx,
   const uint8_t patternTable[],
   const uint32_t colorTableAddr,
   const uint32_t startPattBit,
@@ -1351,13 +1350,13 @@ static inline uint32_t* renderEcm0Tile(
     switch (shift)
     {
       case 1:
-        quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 8, 24, isTile2);
+        quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 8, 24);
         break;
       case 2:
-        quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 16, 16, isTile2);
+        quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 16, 16);
         break;
       default:
-        quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 24, 8, isTile2);
+        quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 24, 8);
         break;
     }
   }
@@ -1386,7 +1385,7 @@ static inline uint32_t* renderEcm0Tile(
 static inline uint32_t* renderEcmTile(
   uint32_t *quadPixels,
   const uint32_t xPos,
-  const uint32_t pattIdx,
+  const uint8_t pattIdx,
   const uint8_t patternTable[],
   const uint32_t colorTableAddr,
   const uint32_t startPattBit,
@@ -1499,15 +1498,20 @@ static inline uint32_t* renderEcmTile(
       switch (shift)
       {
         case 1:
-          quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 8, 24, isTile2);
+          quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 8, 24);
           break;
         case 2:
-          quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 16, 16, isTile2);
+          quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 16, 16);
           break;
         case 3:
-          quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 24, 8, isTile2);
+          quadPixels = rederEcmShiftedTile(quadPixels, tilePixels, pattMask, 24, 8);
           break;
       }
+    }
+    else if (pattMask == 0xff)
+    {
+      *quadPixels++ = tilePixels[0];
+      *quadPixels++ = tilePixels[1];
     }
     else
     {
@@ -1532,7 +1536,7 @@ static inline uint32_t* renderEcmTile(
 static inline uint8_t* renderStdTile(
   uint8_t *pixels,
   const uint32_t xPos,
-  const uint32_t pattIdx,
+  const uint8_t pattIdx,
   const uint8_t patternTable[],
   const uint32_t colorTableAddr,
   const uint32_t pal,
@@ -1605,7 +1609,7 @@ static inline void __time_critical_func(vrEmuF18ATileScanLine)(VR_EMU_INST_ARG c
 
       if (startPattBit)
       {
-        const uint32_t pattIdx = tms9918->vram.bytes[rowNamesAddr + tileIndex];
+        const uint8_t pattIdx = tms9918->vram.bytes[rowNamesAddr + tileIndex];
         quadPixels = renderEcmTile(quadPixels, xPos, pattIdx, patternTable, colorTableAddr, startPattBit, ecm, ecmOffset,
                                     ecmColorMask, ecmColorOffset, pal, attrPerPos, rowOffset, pattRow, tileIndex++, shift,
                                     &lastEmpty, isTile2, alwaysOnTop);
@@ -1626,7 +1630,7 @@ static inline void __time_critical_func(vrEmuF18ATileScanLine)(VR_EMU_INST_ARG c
             }
             tileIndex = 0;
           }
-          const uint32_t pattIdx = tms9918->vram.bytes[rowNamesAddr + tileIndex];
+          const uint8_t pattIdx = tms9918->vram.bytes[rowNamesAddr + tileIndex];
           const uint8_t noStartPattBit = 0;
           quadPixels = renderEcmTile(quadPixels, xPos, pattIdx, patternTable, colorTableAddr, noStartPattBit, ecm, ecmOffset,
                                       ecmColorMask, ecmColorOffset, pal, attrPerPos, rowOffset, pattRow, tileIndex++, shift,
@@ -1648,7 +1652,7 @@ static inline void __time_critical_func(vrEmuF18ATileScanLine)(VR_EMU_INST_ARG c
             }
             tileIndex = 0;
           }
-          const uint32_t pattIdx = tms9918->vram.bytes[rowNamesAddr + tileIndex];
+          const uint8_t pattIdx = tms9918->vram.bytes[rowNamesAddr + tileIndex];
           const uint8_t noStartPattBit = 0;
           const uint32_t noShift = 0;
           quadPixels = renderEcmTile(quadPixels, xPos, pattIdx, patternTable, colorTableAddr, noStartPattBit, ecm, ecmOffset,
@@ -1673,7 +1677,7 @@ static inline void __time_critical_func(vrEmuF18ATileScanLine)(VR_EMU_INST_ARG c
           }
           tileIndex = 0;
         }
-        const uint32_t pattIdx = tms9918->vram.bytes[rowNamesAddr + tileIndex];
+        const uint8_t pattIdx = tms9918->vram.bytes[rowNamesAddr + tileIndex];
         quadPixels = renderEcm0Tile(quadPixels, xPos, pattIdx, patternTable, colorTableAddr, startPattBit, pal, pattRow, shift, isTile2);
         xPos += 8 - startPattBit;
         startPattBit = 0;
@@ -1685,7 +1689,7 @@ static inline void __time_critical_func(vrEmuF18ATileScanLine)(VR_EMU_INST_ARG c
   {
     while (numTiles--)
     {
-      const uint32_t pattIdx = tms9918->vram.bytes[rowNamesAddr + tileIndex];
+      const uint8_t pattIdx = tms9918->vram.bytes[rowNamesAddr + tileIndex];
 
       pixels = renderStdTile(pixels, xPos, pattIdx, patternTable, colorTableAddr, pal, pattRow, 8);
       ++tileIndex;
@@ -1714,7 +1718,7 @@ static void __time_critical_func(vrEmuF18ATile1ScanLine)(VR_EMU_INST_ARG uint8_t
     if (virtY >= maxY)
     {
       virtY -= maxY;
-      swapYPage = (bool)(TMS_REGISTER(tms9918, 0x1d) & 0x01);
+      swapYPage = TMS_REGISTER(tms9918, 0x1d) & 0x01;
     }
    
     y = virtY;
@@ -1729,11 +1733,11 @@ static void __time_critical_func(vrEmuF18ATile1ScanLine)(VR_EMU_INST_ARG uint8_t
   uint16_t rowNamesAddr = tmsNameTableAddr(tms9918) + rowOffset;
   if (swapYPage) rowNamesAddr ^= 0x800;
 
-  uint32_t colorTableAddr = tmsColorTableAddr(tms9918);
+  uint16_t colorTableAddr = tmsColorTableAddr(tms9918);
   if (attrPerPos)
   {
     colorTableAddr += rowOffset;
-    colorTableAddr |= rowNamesAddr & 0xc00;
+    if (swapYPage) colorTableAddr ^= 0x800;
   }
 
 
@@ -1780,7 +1784,7 @@ static void __time_critical_func(vrEmuF18ATile2ScanLine)(VR_EMU_INST_ARG uint8_t
   uint16_t rowNamesAddr = tmsNameTable2Addr(tms9918) + rowOffset;
   if (swapYPage) rowNamesAddr ^= 0x800;
 
-  uint32_t colorTableAddr = tmsColorTable2Addr(tms9918);
+  uint16_t colorTableAddr = tmsColorTable2Addr(tms9918);
   if (attrPerPos)
   {
     colorTableAddr += rowOffset;
