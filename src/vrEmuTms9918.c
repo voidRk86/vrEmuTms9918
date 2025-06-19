@@ -803,6 +803,10 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
 
         if (spriteMag)
         {
+          register uint32_t sb0 = spriteBits[0];
+          register uint32_t sb1 = spriteBits[1];
+          register uint32_t sb2 = spriteBits[2];
+
           while (validPixels)
           {
             //uint32_t invOffset = 32 - offset;
@@ -814,16 +818,13 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
               switch (ecm)
               {
                 case 3:
-                  ecmIndex = (spriteBits[2] >> 28) << 8;
-                  spriteBits[2] <<= 4;
+                  ecmIndex = (sb2 >> 28) << 8;
                   // fallthrough
                 case 2:
-                  ecmIndex |= (spriteBits[1] >> 28) << 4;
-                  spriteBits[1] <<= 4;
+                  ecmIndex |= (sb1 >> 28) << 4;
                   // fallthrough
                 default:
-                  ecmIndex |= spriteBits[0] >> 28;
-                  spriteBits[0] <<= 4;
+                  ecmIndex |= sb0 >> 28;
               }
 
               uint32_t color = ecmLookup[ecmIndex] | quadPal;
@@ -842,12 +843,9 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
               if (chunkMask & 0x2) p[6] = color;
               if (chunkMask & 0x1) p[7] = color;
             }
-            else
-            {
-              spriteBits[2] <<= 4;
-              spriteBits[1] <<= 4;
-              spriteBits[0] <<= 4;
-            }
+            sb2 <<= 4;
+            sb1 <<= 4;
+            sb0 <<= 4;
             validPixels <<= 8;
             xPos += 8;
           }
@@ -872,15 +870,12 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
               {
                 case 3:
                   ecmIndex |= (spriteBits[2] >> 28) << 8;
-                  spriteBits[2] <<= 4;
                   // fallthrough
                 case 2:
                   ecmIndex |= (spriteBits[1] >> 28) << 4;
-                  spriteBits[1] <<= 4;
                   // fallthrough
                 default:
                   ecmIndex |= spriteBits[0] >> 28;
-                  spriteBits[0] <<= 4;
               }
 
               uint32_t color = ecmLookup[ecmIndex] | quadPal;
@@ -889,6 +884,9 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
 
               quadPixels[quadOffset] = (quadPixels[quadOffset] & ~maskQuad) | (color & maskQuad);
             }
+            spriteBits[2] <<= 4;
+            spriteBits[1] <<= 4;
+            spriteBits[0] <<= 4;
             ++quadOffset;
             validPixels <<= 4;
           }
