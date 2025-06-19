@@ -660,9 +660,9 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
     int32_t pattRow = y - yPos;
     pattRow >>= spriteMag;  // this needs to be a shift because -1 / 2 becomes 0. Bad.
 
-    uint32_t thisSpriteSize = spriteSize;
+    uint8_t thisSpriteSize = spriteSize;
     bool thisSprite16 = sprite16;
-    uint32_t thisSpriteIdxMask = spriteIdxMask;
+    uint8_t thisSpriteIdxMask = spriteIdxMask;
     uint8_t thisSpriteSizePx = spriteSizePx;
 
     if (!sprite16 && (spriteAttr[SPRITE_ATTR_COLOR] & 0x10))
@@ -670,8 +670,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
       thisSpriteSize = 16;
       thisSprite16 = true;
       thisSpriteIdxMask = 0xfc;
-      thisSpriteSizePx = thisSpriteSize;
-      thisSpriteSizePx <<= spriteMag;
+      thisSpriteSizePx = thisSpriteSize << spriteMag;
     }
 
     /* check if sprite is visible on this line */
@@ -743,20 +742,14 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
 
     if (spriteMag)
     {
-      uint32_t index = __builtin_bswap32(pattMask);      
-      pattMask = doubledBits[index & 0xff] << 16;
-      index >>= 8;
-      pattMask |= doubledBits[index & 0xff];
+      pattMask = (doubledBits[pattMask >> 24] << 16) | doubledBits[(pattMask >> 16) & 0xff];
     }
 
     /* perform clipping operations */
     if (xPos < 0)
     {
-      uint32_t absXpos = -xPos;
-      uint32_t offset = absXpos;
-      xPos = 0;
-
-      offset >>= spriteMag;
+      int32_t absX = -xPos;
+      uint32_t offset = absX >> spriteMag;
       switch (ecm)
       {
         case 3:
@@ -768,7 +761,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
         default:
           spriteBits[0] <<= offset;
       }
-      pattMask <<= absXpos;
+      pattMask <<= absX;
       
       /* bail early if no bits to draw */
       if (!pattMask)
@@ -777,7 +770,8 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
         continue;
       }
 
-      thisSpriteSizePx -= absXpos;
+      thisSpriteSizePx += xPos;
+      xPos = 0;
     }
     int overflowPx = (xPos + thisSpriteSizePx) - TMS9918_PIXELS_X;
     if (overflowPx > 0)
@@ -819,7 +813,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
               switch (ecm)
               {
                 case 3:
-                  ecmIndex |= (spriteBits[2] >> 28) << 8;
+                  ecmIndex = (spriteBits[2] >> 28) << 8;
                   spriteBits[2] <<= 4;
                   // fallthrough
                 case 2:
@@ -833,13 +827,19 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
 
               uint32_t color = ecmLookup[ecmIndex] | quadPal;
 
-              for (int i = xPos; i < (xPos + 8); i += 2)
-              {
-                if (chunkMask & 0x80) pixels[i] = (uint8_t)color;
-                if (chunkMask & 0x40) pixels[i + 1] = (uint8_t)color;
-                chunkMask <<= 2;
-                color >>= 8;
-              }
+              uint8_t *p = pixels + xPos;
+
+              if (chunkMask & 0x80) p[0] = color & 0x3f;
+              if (chunkMask & 0x40) p[1] = color & 0x3f;
+              color >>= 8;
+              if (chunkMask & 0x20) p[2] = color & 0x3f;
+              if (chunkMask & 0x10) p[3] = color & 0x3f;
+              color >>= 8;
+              if (chunkMask & 0x8) p[4] = color & 0x3f;
+              if (chunkMask & 0x4) p[5] = color & 0x3f;
+              color >>= 8;
+              if (chunkMask & 0x2) p[6] = color & 0x3f;
+              if (chunkMask & 0x1) p[7] = color & 0x3f;
             }
             validPixels <<= 8;
             xPos += 8;
