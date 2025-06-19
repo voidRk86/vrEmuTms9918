@@ -161,6 +161,7 @@ struct vrEmuTMS9918_s
   /* palette writes are done in two stages too */
   uint8_t palWriteStage;
   uint8_t palWriteStage0Value;
+  uint8_t palDirty;
 
   uint32_t startTime;
   uint32_t stopTime;
@@ -264,6 +265,7 @@ inline void vrEmuTms9918WriteDataImpl(VR_EMU_INST_ARG uint8_t data)
 
       // this looks backwards because ARM is little-endian, TMS9900 is big-endian. 
       tms9918->vram.map.pram[TMS_REGISTER(tms9918, 0x2f) & 0x3f] = (tms9918->palWriteStage0Value) | (data << 8); 
+      tms9918->palDirty = 1;
 
       // reset data port palette mode
       if (TMS_REGISTER(tms9918, 0x2f) & 0x40)
