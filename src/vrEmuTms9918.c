@@ -640,7 +640,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
   {
     /* Kidd-proofing: not strictly correct, however some F18A games (lookin' at you, Kidd) 
        sometimes have all sprites enabled with all zeros and that hurts us :( */
-    if (*(uint32_t*)spriteAttr == 0)
+    if (*(uint32_t*)spriteAttr == 0 && tms9918->isUnlocked)
     {
       break;
     }
@@ -674,7 +674,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
     uint8_t thisSpriteIdxMask = spriteIdxMask;
     uint8_t thisSpriteSizePx = spriteSizePx;
     uint8_t spriteAttrColor = spriteAttr[SPRITE_ATTR_COLOR];
-    if (!tms9918->isUnlocked) spriteAttrColor &= 0xf;
+    if (!tms9918->isUnlocked) spriteAttrColor &= 0x8f;
 
     if (!sprite16 && (spriteAttrColor & 0x10))
     {
