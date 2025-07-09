@@ -642,7 +642,8 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
        sometimes have all sprites enabled with all zeros and that hurts us :( */
     if (*(uint32_t*)spriteAttr == 0 && tms9918->isUnlocked)
     {
-      break;
+      spriteAttr += SPRITE_ATTR_BYTES;
+      continue;
     }
 
     int32_t yPos = spriteAttr[SPRITE_ATTR_Y];
@@ -2271,6 +2272,12 @@ void __time_critical_func(vrEmuTms9918WriteRegValue)(VR_EMU_INST_ARG vrEmuTms991
     else if ((regIndex == 0x32) && (value & 0x80))
     { // reset all registers?
       vdpRegisterReset(tms9918);
+
+      // reset palette, etc as well?
+      if (value & 0x40)
+      {
+        tms9918->configDirty = true;
+      }
     }
     else if (regIndex == 0x0F)
     {
