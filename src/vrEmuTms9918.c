@@ -253,8 +253,6 @@ static void __attribute__ ((noinline)) vdpRegisterReset(VrEmuTms9918* tms9918)
   TMS_REGISTER(tms9918, 0x30) = 1; // vram address increment register
   TMS_REGISTER(tms9918, 0x33) = MAX_SPRITES; // Sprites to process
   TMS_REGISTER(tms9918, 0x36) = 0x40;
-  
-  tms9918->configDirty = true; // so values get applied
 }
 
 
@@ -2249,7 +2247,7 @@ void __time_critical_func(vrEmuTms9918WriteRegValue)(VR_EMU_INST_ARG vrEmuTms991
     {
       tms9918->restart = 1;
     }
-    else if ((regIndex == 0x3F) && (value & 0x80)) // firmware update
+    else if ((regIndex == 0x3F)) // firmware update
     {
       // b7      : 0 = idle:   1 = execute
       // b6      : 0 = verify: 1 = write
