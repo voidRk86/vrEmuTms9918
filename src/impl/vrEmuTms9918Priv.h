@@ -9,7 +9,6 @@
 
 #include "../vrEmuTms9918.h"
 
-
 #define GRAPHICS_NUM_COLS         32
 #define GRAPHICS_NUM_ROWS         24
 #define GRAPHICS_CHAR_WIDTH        8
@@ -37,6 +36,7 @@
 #define STATUS_5S               0x40
 #define STATUS_COL              0x20
 
+#define TMS_R0_MODE_TEXT_80_8   0x80
 #define TMS_R0_MODE_TEXT_80     0x04
 #define TMS_R0_MODE_GRAPHICS_II 0x02
 #define TMS_R0_EXT_VDP_ENABLE   0x01
@@ -81,29 +81,29 @@
 #define VRAM_MASK     (BASE_VRAM_SIZE - 1) /* 0x3fff */
 
 
-typedef struct
-{
-  uint8_t  base[BASE_VRAM_SIZE];                 // 0x0000-0x3FFF (16KB)
+  typedef struct
+  {
+    uint8_t  base[BASE_VRAM_SIZE];                 // 0x0000-0x3FFF (16KB)
+    /* video ram */
+    uint8_t  gram1[0x1000];                       // 0x4000-0x4fff (4KB) 2x repeated 2KB
+    uint16_t pram[0x0800];                        // 0x5000-0x5fff (4KB) 32x repeated 128B
 #if VR_EMU_TMS9918_MODE == VR_EMU_TMS9918_MODE_F18A
-  /* video ram */
-  uint8_t  gram1[0x1000];                       // 0x4000-0x4fff (4KB) 2x repeated 2KB
-  uint16_t pram[0x0800];                        // 0x5000-0x5fff (4KB) 32x repeated 128B
 
-  /* 64 write-only registers */
-  uint8_t  registers[TMS_REGISTERS];             // 0x6000-0x6040
+    /* 64 write-only registers */
+    uint8_t  registers[TMS_REGISTERS];             // 0x6000-0x6040
 
-  uint8_t  gram2[0x1000 - TMS_REGISTERS];        // 0x6040-0x6FFF (~4KB)
-  uint8_t  scanline;                             // 0x7000
-  uint8_t  blanking;                             // 0x7001
-  uint8_t  gram3[0x4000 - 2];                    // 0x7002-0xAFFF (~16KB)
+    uint8_t  gram2[0x1000 - TMS_REGISTERS];        // 0x6040-0x6FFF (~4KB)
+    uint8_t  scanline;                             // 0x7000
+    uint8_t  blanking;                             // 0x7001
+    uint8_t  gram3[0x4000 - 2];                    // 0x7002-0xAFFF (~16KB)
 
-  /* status registers (read-only) */
-  uint8_t  status [TMS_STATUS_REGISTERS];        // 0xB000
+    /* status registers (read-only) */
+    uint8_t  status [TMS_STATUS_REGISTERS];        // 0xB000
 
-  uint8_t  gram4[0x5000 - TMS_STATUS_REGISTERS]; // 0xB010-0xFFFF (~20KB)
-  uint8_t  wrksp[36];                            // 0x10000 overflow for hidden workspace
+    uint8_t  gram4[0x5000 - TMS_STATUS_REGISTERS]; // 0xB010-0xFFFF (~20KB)
+    uint8_t  wrksp[36];                            // 0x10000 overflow for hidden workspace
 #endif
-} vrEmuTMS9918MemMap;
+  } vrEmuTMS9918MemMap;
 
 #if MAPPED_REGISTERS
   #define TMS_REGISTER(T, R)      (T->vram.map.registers[R])
@@ -349,3 +349,5 @@ void vrEmuTms9918SetStatusImpl(VR_EMU_INST_ARG uint8_t status)
 {
   TMS_STATUS(tms9918, 0) = status;
 }
+
+#define BGR12PALETTE

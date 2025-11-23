@@ -73,6 +73,7 @@ typedef enum
   TMS_MODE_TEXT,
   TMS_MODE_MULTICOLOR,
   TMS_MODE_TEXT80,
+  TMS_MODE_TEXT80_8,
 } vrEmuTms9918Mode;
 
 typedef enum
@@ -116,6 +117,7 @@ typedef enum
 
 #define TMS9918_PIXELS_X 256
 #define TMS9918_PIXELS_Y 192
+#define TMS9918_80_PIXELS_Y 480
 
 
 /* PUBLIC INTERFACE
@@ -233,7 +235,7 @@ void vrEmuTms9918SetStatus(VR_EMU_INST_ARG uint8_t status);
  * pixels to be filled with TMS9918 color palette indexes (vrEmuTms9918Color)
  */
 VR_EMU_TMS9918_DLLEXPORT
-uint8_t vrEmuTms9918ScanLine(VR_EMU_INST_ARG uint8_t y, uint8_t pixels[TMS9918_PIXELS_X]);
+uint8_t vrEmuTms9918ScanLine(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320]);
 
 /* Function:  vrEmuTms9918RegValue
  * ----------------------------------------
@@ -280,4 +282,6 @@ vrEmuTms9918Mode vrEmuTms9918DisplayMode(VR_EMU_INST_ONLY_ARG);
 VR_EMU_TMS9918_DLLEXPORT
 uint16_t vrEmuTms9918DefaultPalette(int index);
 
+VR_EMU_TMS9918_DLLEXPORT 
+vrEmuTms9918Mode tmsMode(VrEmuTms9918* tms9918);
 #endif // _VR_EMU_TMS9918_H_
