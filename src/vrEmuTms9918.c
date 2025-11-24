@@ -71,12 +71,11 @@ VR_EMU_TMS9918_DLLEXPORT VrEmuTms9918* vrEmuTms9918New()
 
 #endif
 
-
+ 
 
 vrEmuTms9918Mode r1Modes [] = { TMS_MODE_GRAPHICS_I, TMS_MODE_MULTICOLOR, TMS_MODE_TEXT, TMS_MODE_GRAPHICS_I };
 
-VR_EMU_TMS9918_DLLEXPORT 
-vrEmuTms9918Mode __time_critical_func(tmsMode)(VrEmuTms9918* tms9918)
+inline vrEmuTms9918Mode tmsMode2(VrEmuTms9918* tms9918)
 {
   if (TMS_REGISTER(tms9918, TMS_REG_0) & TMS_R0_MODE_GRAPHICS_II)
     return TMS_MODE_GRAPHICS_II;
@@ -237,6 +236,8 @@ static const uint16_t defaultPalette[] = {
   0x0000, 0xF555, 0xF000, 0xF00A, 0xF000, 0xF0A0, 0xF000, 0xF0AA, 0xF000, 0xFA00, 0xF000, 0xFA0A, 0xF000, 0xFA50, 0xF000, 0xFFFF
 };
 
+static void vrEmuTms9918Text80_8_Init();
+
 static void __attribute__ ((noinline)) vdpRegisterReset(VrEmuTms9918* tms9918)
 {
   tms9918->isUnlocked = false;
@@ -254,6 +255,7 @@ static void __attribute__ ((noinline)) vdpRegisterReset(VrEmuTms9918* tms9918)
   TMS_REGISTER(tms9918, 0x30) = 1; // vram address increment register
   TMS_REGISTER(tms9918, 0x33) = MAX_SPRITES; // Sprites to process
   TMS_REGISTER(tms9918, 0x36) = 0x40;
+  vrEmuTms9918Text80_8_Init();
 }
 
 
@@ -1205,11 +1207,42 @@ static void __time_critical_func(vrEmuTms9918Text80ScanLine)(VR_EMU_INST_ARG uin
  * ----------------------------------------
  * generate an 80-column 8 pixel wide text mode scanline
  */
-uint32_t fbBgColArr[256];
-uint32_t bgr12ColArr[256][4];
-bool bColorChanged = true;
-uint8_t lastColor = 0;
+uint32_t fgBgColArr[256];
 extern uint16_t tms9918PaletteBGR12[16];
+
+static void vrEmuTms9918Text80_8_Init()
+{
+  for (uint16_t i = 0; i < 256; ++i)
+  {
+    const uint8_t fgColor = i >> 4;
+    const uint8_t bgColor = i & 0xF;
+    const uint8_t bgFgColor[4] =
+        {
+            (bgColor << 4) | bgColor,
+            (bgColor << 4) | fgColor,
+            (fgColor << 4) | bgColor,
+            (fgColor << 4) | fgColor};
+    const uint32_t bgFgColor12[4] =
+        {
+            tms9918PaletteBGR12[bgColor] | tms9918PaletteBGR12[bgColor] << 16,
+            tms9918PaletteBGR12[bgColor] | tms9918PaletteBGR12[fgColor] << 16,
+            tms9918PaletteBGR12[fgColor] | tms9918PaletteBGR12[bgColor] << 16,
+            tms9918PaletteBGR12[fgColor] | tms9918PaletteBGR12[fgColor] << 16};
+#ifndef BGR12PALETTE
+    uint32_t v = 0;
+    for (int8_t pattBit = 6; pattBit >= 0; pattBit -= 2, ++j)
+    {
+      v |= ((uint32_t)bgFgColor[(i >> pattBit) & 0x03]) << (j * 8);
+    }
+    fbBgColArr[i] = v;
+#else
+    for (int8_t j = 0; j < 4; ++j)
+    {
+      fgBgColArr[bgFgColor[j]] = bgFgColor12[j];
+    }
+#endif
+  }
+}
 
 static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320])
 {
@@ -1222,50 +1255,10 @@ static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG u
 
   uint8_t* rowNamesTable = tms9918->vram.bytes + (tmsNameTableAddr(tms9918) & (0x0c << 10)) + tileY * TEXT80_NUM_COLS;
   const uint8_t* patternTable = tms9918->vram.bytes + tmsPatternTableAddr(tms9918) + pattRow;
+  //const vrEmuTms9918Color bgColor = tmsMainBgColor(tms9918);
+  //const vrEmuTms9918Color fgColor = tmsMainFgColor(tms9918);
 
-  const vrEmuTms9918Color bgColor = tmsMainBgColor(tms9918);
-  const vrEmuTms9918Color fgColor = tmsMainFgColor(tms9918);
 
-  const uint8_t bgFgColor[4] =
-  {
-    (bgColor << 4) | bgColor,
-    (bgColor << 4) | fgColor,
-    (fgColor << 4) | bgColor,
-    (fgColor << 4) | fgColor
-  };
-  const uint32_t bgFgColor12[4] =
-  {
-    tms9918PaletteBGR12[bgColor] | tms9918PaletteBGR12[bgColor] << 16,
-    tms9918PaletteBGR12[bgColor] | tms9918PaletteBGR12[fgColor] << 16,
-    tms9918PaletteBGR12[fgColor] | tms9918PaletteBGR12[bgColor] << 16,
-    tms9918PaletteBGR12[fgColor] | tms9918PaletteBGR12[fgColor] << 16
-  };
-  if (lastColor != bgFgColor[1])
-  {
-    bColorChanged = true;
-    lastColor = bgFgColor[1];
-  }
-  if (bColorChanged)
-  {
-    for (uint16_t i = 0; i < 256; ++i)
-    {
-      uint8_t j = 0;
-      uint32_t v = 0;
-#ifndef BGR12PALETTE
-      for (int8_t pattBit = 6; pattBit >= 0; pattBit -= 2, ++j)
-      {
-        v |= ((uint32_t) bgFgColor[(i >> pattBit) & 0x03]) << (j*8);
-      }
-      fbBgColArr[i] = v;
-#else
-      for (int8_t pattBit = 6; pattBit >= 0; pattBit -= 2, ++j)
-      {
-        bgr12ColArr[i][j] = bgFgColor12[(i >> pattBit) & 0x03];
-      }
-#endif
-    }
-    bColorChanged = false;
-  }
 #ifndef BGR12PALETTE
   //uint32_t* pixPtr = (uint32_t*)pixels;
   uint8_t* pixPtr = pixels;
@@ -1283,10 +1276,21 @@ static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG u
   uint32_t* pixPtr = (uint32_t*)pixels;
   for (uint8_t tileX = 0; tileX < TEXT80_NUM_COLS; ++tileX)
   {
+    uint8_t colorByte = *(rowNamesTable + T80_VRAM_ATTR_ADDR);
+    const uint8_t fgColor = colorByte >> 4;
+    const uint8_t bgColor = colorByte & 0xF;
+    const uint8_t bgFgColor[4] = {
+            (bgColor << 4) | bgColor,
+            (bgColor << 4) | fgColor,
+            (fgColor << 4) | bgColor,
+            (fgColor << 4) | fgColor};
+    uint8_t color = (bgColor << 4) | fgColor;
+
     uint8_t pattByte = patternTable[((uint)(*rowNamesTable++)) << 4];
-    int32_t* pCollArr = bgr12ColArr[pattByte];
-    for (uint8_t i=0; i<4; ++i)
-      *pixPtr++ = *pCollArr++;
+    for (int8_t pattBit = 6; pattBit >= 0; pattBit -= 2)
+    {
+      *pixPtr++ = fgBgColArr[bgFgColor[(pattByte >> pattBit) & 0x03]];
+    }
   }
 #endif
 }
@@ -2228,7 +2232,7 @@ VR_EMU_TMS9918_DLLEXPORT uint8_t __time_critical_func(vrEmuTms9918ScanLine)(VR_E
     dma_channel_set_trans_count(dma32, TMS9918_PIXELS_X / 4, false);
   }
 
-  tmsCachedMode = tmsMode(tms9918);
+  tmsCachedMode = tmsMode2(tms9918);
 
   /* clear the buffer with background color */
   bg = repeatedPalette[tmsMainBgColor(tms9918)];

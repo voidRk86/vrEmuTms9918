@@ -282,6 +282,11 @@ vrEmuTms9918Mode vrEmuTms9918DisplayMode(VR_EMU_INST_ONLY_ARG);
 VR_EMU_TMS9918_DLLEXPORT
 uint16_t vrEmuTms9918DefaultPalette(int index);
 
-VR_EMU_TMS9918_DLLEXPORT 
-vrEmuTms9918Mode tmsMode(VrEmuTms9918* tms9918);
+extern vrEmuTms9918Mode tmsCachedMode;
+
+inline
+vrEmuTms9918Mode tmsMode(VrEmuTms9918* tms9918)
+{
+  return tmsCachedMode;
+}
 #endif // _VR_EMU_TMS9918_H_

@@ -79,6 +79,7 @@
 #endif
 
 #define VRAM_MASK     (BASE_VRAM_SIZE - 1) /* 0x3fff */
+#define T80_VRAM_ATTR_ADDR 0x3000
 
 
   typedef struct
@@ -209,12 +210,32 @@ inline void vrEmuTms9918WriteAddrImpl(VR_EMU_INST_ARG uint8_t data)
       if ((data & 0x40) == 0)
       {
         tms9918->readAheadBuffer = tms9918->vram.bytes[(tms9918->currentAddress) & VRAM_MASK];
-        tms9918->currentAddress += (int8_t)TMS_REGISTER(tms9918, 0x30); // increment register
+        if (vrEmuTms9918DisplayMode(tms9918) == TMS_MODE_TEXT80_8 && tms9918->currentAddress<0xA00)
+          tms9918->currentAddress += T80_VRAM_ATTR_ADDR;
+        else
+          tms9918->currentAddress += (int8_t)TMS_REGISTER(tms9918, 0x30); // increment register
       }
     }
     tms9918->regWriteStage = 0;
   }
 }
+
+inline void IncrementCurrentAddress(VR_EMU_INST_ONLY_ARG)
+{
+  if (tmsMode(tms9918) == TMS_MODE_TEXT80_8 && (tms9918->currentAddress<0xA00 || tms9918->currentAddress>=T80_VRAM_ATTR_ADDR))
+  {
+    if ((tms9918->currentAddress & T80_VRAM_ATTR_ADDR) == T80_VRAM_ATTR_ADDR)
+    {
+      tms9918->currentAddress -= T80_VRAM_ATTR_ADDR;
+      tms9918->currentAddress += (int8_t)TMS_REGISTER(tms9918, 0x30); // increment register
+    }
+    else
+      tms9918->currentAddress += T80_VRAM_ATTR_ADDR;
+  }
+  else
+    tms9918->currentAddress += (int8_t)TMS_REGISTER(tms9918, 0x30); // increment register
+}
+
 
 /* Function:  vrEmuTms9918ReadStatus
  * ----------------------------------------
@@ -283,7 +304,7 @@ inline void vrEmuTms9918WriteDataImpl(VR_EMU_INST_ARG uint8_t data)
     tms9918->regWriteStage = 0;
     tms9918->readAheadBuffer = data;
     tms9918->vram.bytes[(tms9918->currentAddress) & VRAM_MASK] = data;
-    tms9918->currentAddress += (int8_t)TMS_REGISTER(tms9918, 0x30); // increment register
+    IncrementCurrentAddress();
   }
 }
 
@@ -297,7 +318,7 @@ inline uint8_t vrEmuTms9918ReadDataImpl(VR_EMU_INST_ONLY_ARG)
   tms9918->regWriteStage = 0;
   uint8_t currentValue = tms9918->readAheadBuffer;
   tms9918->readAheadBuffer = tms9918->vram.bytes[(tms9918->currentAddress) & VRAM_MASK];
-  tms9918->currentAddress += (int8_t)TMS_REGISTER(tms9918, 0x30); // increment register
+  IncrementCurrentAddress();
   return currentValue;
 }
 
@@ -309,7 +330,7 @@ inline uint8_t vrEmuTms9918ReadAheadDataImpl(VR_EMU_INST_ONLY_ARG)
 {
   tms9918->regWriteStage = 0;
   tms9918->readAheadBuffer = tms9918->vram.bytes[(tms9918->currentAddress) & VRAM_MASK];
-  tms9918->currentAddress += (int8_t)TMS_REGISTER(tms9918, 0x30); // increment register
+  IncrementCurrentAddress();
   return tms9918->readAheadBuffer;
 }
 
