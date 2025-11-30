@@ -1214,8 +1214,8 @@ static void vrEmuTms9918Text80_8_Init()
 {
   for (uint16_t i = 0; i < 256; ++i)
   {
-    const uint8_t fgColor = i >> 4;
-    const uint8_t bgColor = i & 0xF;
+    const uint8_t bgColor = i >> 4;
+    const uint8_t fgColor = i & 0xF;
     const uint8_t bgFgColor[4] =
         {
             (bgColor << 4) | bgColor,
@@ -1277,8 +1277,8 @@ static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG u
   for (uint8_t tileX = 0; tileX < TEXT80_NUM_COLS; ++tileX)
   {
     uint8_t colorByte = *(rowNamesTable + T80_VRAM_ATTR_ADDR);
-    const uint8_t fgColor = colorByte >> 4;
-    const uint8_t bgColor = colorByte & 0xF;
+    const uint8_t bgColor = colorByte >> 4;
+    const uint8_t fgColor = colorByte & 0xF;
     const uint8_t bgFgColor[4] = {
             (bgColor << 4) | bgColor,
             (bgColor << 4) | fgColor,
