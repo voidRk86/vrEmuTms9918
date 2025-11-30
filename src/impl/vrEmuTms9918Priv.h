@@ -172,6 +172,7 @@ struct vrEmuTMS9918_s
   bool configDirty;
 
   bool scanlineHasSprites;
+  bool bIncrementByOne;
 };
 
 #if VR_EMU_TMS9918_SINGLE_INSTANCE
@@ -207,10 +208,11 @@ inline void vrEmuTms9918WriteAddrImpl(VR_EMU_INST_ARG uint8_t data)
     else /* address */
     {
       tms9918->currentAddress = tms9918->regWriteStage0Value | ((data & 0x3f) << 8);
+      tms9918->bIncrementByOne = tms9918->currentAddress >= 0x3000;
       if ((data & 0x40) == 0)
       {
         tms9918->readAheadBuffer = tms9918->vram.bytes[(tms9918->currentAddress) & VRAM_MASK];
-        if (vrEmuTms9918DisplayMode(tms9918) == TMS_MODE_TEXT80_8 && tms9918->currentAddress<0xA00)
+        if (vrEmuTms9918DisplayMode(tms9918) == TMS_MODE_TEXT80_8 && tms9918->currentAddress<0xA00 && !tms9918->bIncrementByOne)
           tms9918->currentAddress += T80_VRAM_ATTR_ADDR;
         else
           tms9918->currentAddress += (int8_t)TMS_REGISTER(tms9918, 0x30); // increment register
@@ -222,7 +224,7 @@ inline void vrEmuTms9918WriteAddrImpl(VR_EMU_INST_ARG uint8_t data)
 
 inline void IncrementCurrentAddress(VR_EMU_INST_ONLY_ARG)
 {
-  if (tmsMode(tms9918) == TMS_MODE_TEXT80_8 && (tms9918->currentAddress<0xA00 || tms9918->currentAddress>=T80_VRAM_ATTR_ADDR))
+  if (tmsMode(tms9918) == TMS_MODE_TEXT80_8 && (tms9918->currentAddress<0xA00 || tms9918->currentAddress>=T80_VRAM_ATTR_ADDR) && tms9918->currentAddress<0x4000 && !tms9918->bIncrementByOne)
   {
     if ((tms9918->currentAddress & T80_VRAM_ATTR_ADDR) == T80_VRAM_ATTR_ADDR)
     {
