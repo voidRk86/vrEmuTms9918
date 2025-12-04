@@ -47,6 +47,7 @@
 #define TMS_R1_MODE_TEXT        0x10
 #define TMS_R1_SPRITE_16        0x02
 #define TMS_R1_SPRITE_MAG2      0x01
+#define TMS_R1_ADDR_INC_ONE            0x04
 
 #define VR_EMU_TMS9918_MODE_TMS9918 0
 #define VR_EMU_TMS9918_MODE_F18A    1
@@ -80,7 +81,6 @@
 
 #define VRAM_MASK     (BASE_VRAM_SIZE - 1) /* 0x3fff */
 #define T80_VRAM_ATTR_ADDR 0x3000
-
 
   typedef struct
   {
@@ -203,12 +203,15 @@ inline void vrEmuTms9918WriteAddrImpl(VR_EMU_INST_ARG uint8_t data)
       if ((data & 0x40) == 0) // Was 0x78, but we allow 64 registers = 0x40
       {
         vrEmuTms9918WriteRegValue(VR_EMU_INST data, tms9918->regWriteStage0Value);
+        if ((data & 0x7F) == TMS_REG_1 /* && tmsMode(tms9918) == TMS_MODE_TEXT80_8 */ && (tms9918->regWriteStage0Value & TMS_R1_ADDR_INC_ONE) != 0 )
+          tms9918->bIncrementByOne = true;
       }
     }
     else /* address */
     {
       tms9918->currentAddress = tms9918->regWriteStage0Value | ((data & 0x3f) << 8);
-      tms9918->bIncrementByOne = tms9918->currentAddress >= 0x3000;
+      if (tmsMode(tms9918) == TMS_MODE_TEXT80_8 && (TMS_REGISTER(tms9918, TMS_REG_1) & TMS_R1_ADDR_INC_ONE) == 0)
+        tms9918->bIncrementByOne = tms9918->currentAddress >= 0x3000; // increment by one for attributes region 
       if ((data & 0x40) == 0)
       {
         tms9918->readAheadBuffer = tms9918->vram.bytes[(tms9918->currentAddress) & VRAM_MASK];
