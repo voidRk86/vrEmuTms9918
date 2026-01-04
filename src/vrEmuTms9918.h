@@ -113,6 +113,7 @@ typedef enum
   TMS_REG_SPRITE_ATTR_TABLE = TMS_REG_5,
   TMS_REG_SPRITE_PATT_TABLE = TMS_REG_6,
   TMS_REG_FG_BG_COLOR       = TMS_REG_7,
+  TMS_REG_SCROLL_Y          = 60
 } vrEmuTms9918Register;
 
 #define TMS9918_PIXELS_X 256

@@ -1246,7 +1246,7 @@ static void vrEmuTms9918Text80_8_Init()
 
 static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320])
 {
-  const uint8_t tileY = y >> 4;   /* which name table row (0 - 23) */
+  const uint8_t tileY = ((y >> 4)+TMS_REGISTER(tms9918, TMS_REG_SCROLL_Y))%30;   /* which name table row (0 - 23) */
   const uint8_t pattRow = y & 0x0f;  /* which pattern row (0 - 15) */
 
   /* address in name table at the start of this row */
