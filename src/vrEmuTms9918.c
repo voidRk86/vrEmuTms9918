@@ -2286,10 +2286,10 @@ VR_EMU_TMS9918_DLLEXPORT uint8_t __time_critical_func(vrEmuTms9918ScanLine)(VR_E
         if (tms9918->isUnlocked)
           tempStatus = vrEmuTms9918OutputSprites(VR_EMU_INST y, pixels);
         break;
-    case TMS_MODE_TEXT80_8:
-      vrEmuTms9918Text80_8ScanLine(VR_EMU_INST y, pixels);
-      break;
-    }
+      case TMS_MODE_TEXT80_8:
+        vrEmuTms9918Text80_8ScanLine(VR_EMU_INST y, pixels);
+        break;
+      }
   }
   return tempStatus;
 }
