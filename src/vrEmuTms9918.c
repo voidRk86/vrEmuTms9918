@@ -1277,8 +1277,8 @@ static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG u
   for (uint8_t tileX = 0; tileX < TEXT80_NUM_COLS; ++tileX)
   {
     uint8_t colorByte = *(rowNamesTable + T80_VRAM_ATTR_ADDR);
-    const uint8_t bgColor = colorByte >> 4;
-    const uint8_t fgColor = colorByte & 0xF;
+    const uint8_t fgColor = colorByte >> 4;
+    const uint8_t bgColor = colorByte & 0xF;
     const uint8_t bgFgColor[4] = {
             (bgColor << 4) | bgColor,
             (bgColor << 4) | fgColor,
@@ -2344,6 +2344,10 @@ void __time_critical_func(vrEmuTms9918WriteRegValue)(VR_EMU_INST_ARG vrEmuTms991
     else if ((regIndex == 0x38) && (value & 1))
     {
       tms9918->restart = 1;
+    }
+    else if (regIndex == 0x2E)
+    {
+      tms9918->command = 1;
     }
     else if ((regIndex == 0x3F)) // firmware update
     {
