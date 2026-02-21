@@ -594,12 +594,13 @@ static inline void loadSpriteData(uint32_t *spriteBits, uint32_t pattOffset, uin
   } while (++i < ecm);
 }
 
+extern uint16_t tms9918PaletteBGR12[16];
 
 /* Function:  vrEmuTms9918OutputSprites
  * ----------------------------------------
  * Output Sprites to a scanline
  */
-static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_t y, const bool spriteMag, uint8_t pixels[TMS9918_PIXELS_X])
+static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint16_t y, const bool spriteMag, uint8_t pixels[TMS9918_PIXELS_X])
 {
   const uint8_t spriteSize = tmsSpriteSize(tms9918);
   const bool sprite16 = spriteSize == 16;
@@ -608,7 +609,12 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
   const uint16_t spriteAttrTableAddr = tmsSpriteAttrTableAddr(tms9918);
   const uint16_t spritePatternAddr = tmsSpritePatternTableAddr(tms9918);
   const bool row30Mode = tms9918->isUnlocked && (TMS_REGISTER(tms9918, 0x31) & 0x40);
-  const uint32_t maxY = row30Mode ? 0xf0 : 0xe0;
+  uint32_t maxY = row30Mode ? 0xf0 : 0xe0;
+  const bool bText80_8Mode = tmsMode(tms9918) == TMS_MODE_TEXT80_8;
+  if (bText80_8Mode)
+  {
+    maxY *= 2;
+  }
 
   uint32_t spritesShown = 0;
   uint8_t tempStatus = 0x1f;
@@ -648,6 +654,11 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
     }
 
     int32_t yPos = spriteAttr[SPRITE_ATTR_Y];
+
+    if (bText80_8Mode)
+    {
+      yPos *= 2;
+    }
 
     /* stop processing when yPos == LAST_SPRITE_YPOS */
     if (yPos == LAST_SPRITE_YPOS && !row30Mode)
@@ -709,10 +720,15 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
 
     const int32_t earlyClockOffset = (spriteAttrColor & 0x80) ? -32 : 0;
     int32_t xPos = (int32_t)(spriteAttr[SPRITE_ATTR_X]) + earlyClockOffset;
+    int32_t xPosOrg = xPos;
     if ((xPos > TMS9918_PIXELS_X) || (-xPos > thisSpriteSizePx))
     {
       spriteAttr += SPRITE_ATTR_BYTES;
       continue;
+    }
+    if (bText80_8Mode)
+    {
+      xPos *= 3;
     }
 
     if (spriteAttrColor & 0x20) pattRow = thisSpriteSize - pattRow; // flip Y?
@@ -786,14 +802,14 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
       thisSpriteSizePx += xPos;
       xPos = 0;
     }
-    int overflowPx = (xPos + thisSpriteSizePx) - TMS9918_PIXELS_X;
+    int overflowPx = (xPos + thisSpriteSizePx) - (bText80_8Mode ? 3 : 1) * TMS9918_PIXELS_X;
     if (overflowPx > 0)
     {
       thisSpriteSizePx -= overflowPx;
     }
 
     /* test and update the collision mask */
-    uint32_t validPixels = tmsTestCollisionMask(VR_EMU_INST xPos, pattMask, thisSpriteSizePx);
+    uint32_t validPixels = tmsTestCollisionMask(VR_EMU_INST xPosOrg, pattMask, thisSpriteSizePx);
 
     /* if the result is different, we collided */
     if (validPixels != pattMask)
@@ -917,17 +933,30 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
       }
       else  // non-ecm single-color sprite
       {
-        if (tmsCachedMode == TMS_MODE_TEXT80) spriteColor |= spriteColor << 4;
+        if (tmsCachedMode == TMS_MODE_TEXT80/*  || bText80_8Mode */) spriteColor |= spriteColor << 4;
 
-        while (validPixels)
-        {
-          if ((int32_t)validPixels < 0)
+        if (bText80_8Mode)
+          while (validPixels)
           {
-            pixels[xPos] = spriteColor;
+
+            if ((int32_t)validPixels < 0)
+            {
+              pixels[xPos * 2] = tms9918PaletteBGR12[spriteColor];
+            }
+            validPixels <<= 1;
+            ++xPos;
           }
-          validPixels <<= 1;
-          ++xPos;
-        }          
+        else
+          while (validPixels)
+          {
+
+           if ((int32_t)validPixels < 0)
+            {
+              pixels[xPos] = spriteColor;
+            }
+            validPixels <<= 1;
+            ++xPos;
+          }
       }
     }
     else
@@ -960,7 +989,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
   return tempStatus;
 }
 
-static uint8_t __time_critical_func(vrEmuTms9918OutputSprites)(VR_EMU_INST_ARG uint8_t y, uint8_t pixels[TMS9918_PIXELS_X])
+static uint8_t __time_critical_func(vrEmuTms9918OutputSprites)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[TMS9918_PIXELS_X])
 {
   const bool spriteMag = tmsSpriteMag(tms9918);
   if (spriteMag)
@@ -2288,6 +2317,8 @@ VR_EMU_TMS9918_DLLEXPORT uint8_t __time_critical_func(vrEmuTms9918ScanLine)(VR_E
         break;
       case TMS_MODE_TEXT80_8:
         vrEmuTms9918Text80_8ScanLine(VR_EMU_INST y, pixels);
+        if (tms9918->isUnlocked)
+          tempStatus = vrEmuTms9918OutputSprites(VR_EMU_INST y, pixels);
         break;
       }
   }
