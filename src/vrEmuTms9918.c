@@ -595,6 +595,9 @@ static inline void loadSpriteData(uint32_t *spriteBits, uint32_t pattOffset, uin
 }
 
 extern uint16_t tms9918PaletteBGR12[16];
+extern
+__attribute__((section(".scratch_y.buffer"))) 
+ uint32_t __aligned(4) pram [64];
 
 /* Function:  vrEmuTms9918OutputSprites
  * ----------------------------------------
@@ -889,6 +892,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint16
           }
 
           // get him to be word aligned so we can smash out 4 pixels at a time
+          int32_t xPosLast = xPos;
           uint32_t quadOffset = xPos >> 2;
           const uint32_t pixOffset = xPos & 0x3;
           validPixels >>= pixOffset;
@@ -896,8 +900,16 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint16
           spriteBits[1] >>= pixOffset;
           spriteBits[0] >>= pixOffset;
 
-          uint32_t *quadPixels = (uint32_t*)pixels;
-
+          uint32_t *quadPixels;
+          if (bText80_8Mode)
+          {
+            static uint32_t quadPixelsArr[32/4];
+            quadPixels = quadPixelsArr;
+            memset(quadPixelsArr, 0, sizeof(quadPixelsArr));
+            quadOffset = 0;
+          }
+          else
+            quadPixels = (uint32_t*)pixels;
           while (validPixels)
           {
             /* output the sprite 4 pixels at a time */
@@ -929,11 +941,22 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint16
             ++quadOffset;
             validPixels <<= 4;
           }
+          if (bText80_8Mode)
+          {
+            uint8_t *pixels8 = (uint8_t *)quadPixels;
+            uint16_t *pixels16 = ((uint16_t*)pixels)+xPosLast;
+            for (uint8_t i = 0; i < 32; ++i)
+            {
+              uint8_t c = pixels8[i];
+              if (c)
+                pixels16[i] = pram/* tms9918PaletteBGR12 */[c];
+            }
+          }
         }
       }
       else  // non-ecm single-color sprite
       {
-        if (tmsCachedMode == TMS_MODE_TEXT80/*  || bText80_8Mode */) spriteColor |= spriteColor << 4;
+        if (tmsCachedMode == TMS_MODE_TEXT80) spriteColor |= spriteColor << 4;
 
         if (bText80_8Mode)
           while (validPixels)
@@ -941,7 +964,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint16
 
             if ((int32_t)validPixels < 0)
             {
-              pixels[xPos * 2] = tms9918PaletteBGR12[spriteColor];
+              ((uint16_t*)pixels)[xPos] = pram /* tms9918PaletteBGR12 */[spriteColor];
             }
             validPixels <<= 1;
             ++xPos;
