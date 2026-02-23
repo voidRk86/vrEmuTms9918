@@ -544,14 +544,72 @@ static void reversedBitsInit()
 }
 
 /* a lookup to apply a 6-bit palette to 4 bytes of a uint32_t */
-static __attribute__((section(".scratch_x.lookup"))) uint32_t __aligned(4) repeatedPalette[64];
-static void repeatedPaletteInit()
-{
-  for (int i = 0; i < 64; ++i)
-  {
-    repeatedPalette[i] = (i << 24) | (i << 16) | (i << 8) | i;
-  }
-}
+//static __attribute__((section(".scratch_x.lookup")))
+const uint32_t __aligned(4) repeatedPalette[64] = {
+    0x00000000,
+    0x01010101,
+    0x02020202,
+    0x03030303,
+    0x04040404,
+    0x05050505,
+    0x06060606,
+    0x07070707,
+    0x08080808,
+    0x09090909,
+    0x0A0A0A0A,
+    0x0B0B0B0B,
+    0x0C0C0C0C,
+    0x0D0D0D0D,
+    0x0E0E0E0E,
+    0x0F0F0F0F,
+    0x10101000,
+    0x11111111,
+    0x12121212,
+    0x13131313,
+    0x14141414,
+    0x15151515,
+    0x16161616,
+    0x17171717,
+    0x18181818,
+    0x19191919,
+    0x1A1A1A1A,
+    0x1B1B1B1B,
+    0x1C1C1C1C,
+    0x1D1D1D1D,
+    0x1E1E1E1E,
+    0x1F1F1F1F,
+    0x20202020,
+    0x21212121,
+    0x22222222,
+    0x23232323,
+    0x24242424,
+    0x25252525,
+    0x26262626,
+    0x27272727,
+    0x28282828,
+    0x29292929,
+    0x2A2A2A2A,
+    0x2B2B2B2B,
+    0x2C2C2C2C,
+    0x2D2D2D2D,
+    0x2E2E2E2E,
+    0x2F2F2F2F,
+    0x30303030,
+    0x31313131,
+    0x32323232,
+    0x33333333,
+    0x34343434,
+    0x35353535,
+    0x36363636,
+    0x37373737,
+    0x38383838,
+    0x39393939,
+    0x3A3A3A3A,
+    0x3B3B3B3B,
+    0x3C3C3C3C,
+    0x3D3D3D3D,
+    0x3E3E3E3E,
+    0x3F3F3F3F};
 
 /* a lookup from a 4-bit mask to a word of 8-bit masks (reversed byte order) */
 static __attribute__((section(".scratch_x.lookup"))) uint32_t __aligned(4) maskExpandNibbleToWordRev[16] =
@@ -570,7 +628,7 @@ void initLookups()
   ecmLookupInit();
   doubledBitsInit();
   reversedBitsInit();
-  repeatedPaletteInit();
+  //repeatedPaletteInit();
   lookupsReady = true;
 }
 
@@ -862,18 +920,42 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint16
 
               uint32_t color = ecmLookup[ecmIndex] | quadPal;
 
-              uint8_t *p = pixels + xPos;
-              if (chunkMask & 0x80) p[0] = color;
-              if (chunkMask & 0x40) p[1] = color;
-              color >>= 8;
-              if (chunkMask & 0x20) p[2] = color;
-              if (chunkMask & 0x10) p[3] = color;
-              color >>= 8;
-              if (chunkMask & 0x8) p[4] = color;
-              if (chunkMask & 0x4) p[5] = color;
-              color >>= 8;
-              if (chunkMask & 0x2) p[6] = color;
-              if (chunkMask & 0x1) p[7] = color;
+              if (bText80_8Mode)
+              {
+                uint16_t *p = ((uint16_t*)pixels) + xPos;
+                uint16_t c = pram[color & 63];
+
+                if (chunkMask & 0x80) p[0] = c;
+                if (chunkMask & 0x40) p[1] = c;
+                color >>= 8;
+                c = pram[color & 63];
+                if (chunkMask & 0x20) p[2] = c;
+                if (chunkMask & 0x10) p[3] = c;
+                color >>= 8;
+                c = pram[color & 63];
+                if (chunkMask & 0x8) p[4] = c;
+                if (chunkMask & 0x4) p[5] = c;
+                color >>= 8;
+                c = pram[color & 63];
+                if (chunkMask & 0x2) p[6] = c;
+                if (chunkMask & 0x1) p[7] = c;
+
+              }
+              else
+              {
+                uint8_t *p = pixels + xPos;
+                if (chunkMask & 0x80) p[0] = color;
+                if (chunkMask & 0x40) p[1] = color;
+                color >>= 8;
+                if (chunkMask & 0x20) p[2] = color;
+                if (chunkMask & 0x10) p[3] = color;
+                color >>= 8;
+                if (chunkMask & 0x8) p[4] = color;
+                if (chunkMask & 0x4) p[5] = color;
+                color >>= 8;
+                if (chunkMask & 0x2) p[6] = color;
+                if (chunkMask & 0x1) p[7] = color;
+              }
             }
             sb2 <<= 4;
             sb1 <<= 4;
