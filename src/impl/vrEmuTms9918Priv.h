@@ -9,6 +9,7 @@
 
 #include "../vrEmuTms9918.h"
 
+
 #define GRAPHICS_NUM_COLS         32
 #define GRAPHICS_NUM_ROWS         24
 #define GRAPHICS_CHAR_WIDTH        8
@@ -254,7 +255,8 @@ inline uint8_t vrEmuTms9918ReadStatusImpl(VR_EMU_INST_ONLY_ARG)
   tms9918->palWriteStage = 0;
   TMS_REGISTER(tms9918, 0x2f) &= 0x7f; // reset data port palette mode
 
-  if ((TMS_REGISTER(tms9918, 0x0F) & 0x0F) == 0) {
+  if ((TMS_REGISTER(tms9918, 0x0F) & 0x0F) == 0)
+  {
     const uint8_t tmpStatus = TMS_STATUS(tms9918, 0);
     TMS_STATUS(tms9918, 0) = 0x1f;
     return tmpStatus;
