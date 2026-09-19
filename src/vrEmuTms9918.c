@@ -665,7 +665,7 @@ __attribute__((section(".scratch_y.buffer")))
  * ----------------------------------------
  * Output Sprites to a scanline
  */
-static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint16_t y, const bool spriteMag, uint8_t pixels[TMS9918_PIXELS_X])
+static /* inline */ uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint16_t y, const bool spriteMag, uint8_t pixels[TMS9918_PIXELS_X])
 {
   const uint8_t spriteSize = tmsSpriteSize(tms9918);
   const bool sprite16 = spriteSize == 16;
@@ -1898,7 +1898,7 @@ static inline uint8_t* renderStdTile(
  * 
  * INLINE: so will be different versions generated, depending on hard-coded (or known at compile-time) arguments (T1 or T2)
  */
-static inline void __time_critical_func(vrEmuF18ATileScanLine)(VR_EMU_INST_ARG const uint8_t y, const bool hpSize, uint16_t rowNamesAddr, uint16_t colorTableAddr, const uint16_t rowOffset, uint8_t tileIndex, uint8_t startPattBit, const bool attrPerPos, uint8_t pal, const bool alwaysOnTop, const bool isTile2, uint8_t pixels[TMS9918_PIXELS_X])
+static /* inline */ void __time_critical_func(vrEmuF18ATileScanLine)(VR_EMU_INST_ARG const uint8_t y, const bool hpSize, uint16_t rowNamesAddr, uint16_t colorTableAddr, const uint16_t rowOffset, uint8_t tileIndex, uint8_t startPattBit, const bool attrPerPos, uint8_t pal, const bool alwaysOnTop, const bool isTile2, uint8_t pixels[TMS9918_PIXELS_X])
 {
   uint32_t xPos = 0;
   uint32_t lastEmpty = -1;
@@ -2139,7 +2139,7 @@ static void __time_critical_func(vrEmuF18ATile2ScanLine)(VR_EMU_INST_ARG uint16_
  * 
  * INLINE: so will be different versions generated, depending on hard-coded (or known at compile-time) arguments
  */
-static inline bool __time_critical_func(renderBitmapLayer)(VR_EMU_INST_ARG uint16_t y, bool opaque, const uint8_t width, const uint16_t addr, const uint8_t bmlCtl, uint8_t pixels[TMS9918_PIXELS_X])
+static /* inline */ bool __time_critical_func(renderBitmapLayer)(VR_EMU_INST_ARG uint16_t y, bool opaque, const uint8_t width, const uint16_t addr, const uint8_t bmlCtl, uint8_t pixels[TMS9918_PIXELS_X])
 {
   bool writeMask = bmlCtl & 0x40;
 
