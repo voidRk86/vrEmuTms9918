@@ -1431,19 +1431,10 @@ static void vrEmuTms9918Text80_8_Init()
             tms9918PaletteBGR12[bgColor] | tms9918PaletteBGR12[fgColor] << 16,
             tms9918PaletteBGR12[fgColor] | tms9918PaletteBGR12[bgColor] << 16,
             tms9918PaletteBGR12[fgColor] | tms9918PaletteBGR12[fgColor] << 16};
-#ifndef BGR12PALETTE
-    uint32_t v = 0;
-    for (int8_t pattBit = 6; pattBit >= 0; pattBit -= 2, ++j)
-    {
-      v |= ((uint32_t)bgFgColor[(i >> pattBit) & 0x03]) << (j * 8);
-    }
-    fbBgColArr[i] = v;
-#else
     for (int8_t j = 0; j < 4; ++j)
     {
       fgBgColArr[bgFgColor[j]] = bgFgColor12[j];
     }
-#endif
   }
 }
 
@@ -1462,20 +1453,6 @@ static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG u
   //const vrEmuTms9918Color fgColor = tmsMainFgColor(tms9918);
 
 
-#ifndef BGR12PALETTE
-  //uint32_t* pixPtr = (uint32_t*)pixels;
-  uint8_t* pixPtr = pixels;
-
-  for (uint8_t tileX = 0; tileX < 30 /*TEXT80_NUM_COLS*/; ++tileX)
-  {
-    uint8_t pattByte = patternTable[((uint)(*rowNamesTable++)) << 4];
-    //*pixPtr++ = fbBgColArr[pattByte];
-    for (int8_t pattBit = 6; pattBit >= 0; pattBit -= 2)
-    {
-      *pixPtr++ = bgFgColor[(pattByte >> pattBit) & 0x03];
-    }
-  }
-#else
   uint32_t* pixPtr = (uint32_t*)pixels;
   for (uint8_t tileX = 0; tileX < TEXT80_NUM_COLS; ++tileX)
   {
@@ -1495,7 +1472,6 @@ static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG u
       *pixPtr++ = fgBgColArr[bgFgColor[(pattByte >> pattBit) & 0x03]];
     }
   }
-#endif
 }
 /* Function:  renderEcmShiftedTile
  * ----------------------------------------

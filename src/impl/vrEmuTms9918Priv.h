@@ -380,5 +380,3 @@ inline void vrEmuTms9918SetStatusImpl(VR_EMU_INST_ARG uint8_t status)
 {
   TMS_STATUS(tms9918, 0) = status;
 }
-
-#define BGR12PALETTE
